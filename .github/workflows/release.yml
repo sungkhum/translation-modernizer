@@ -12,13 +12,12 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
-    
-    
 
     steps:
       # Output the OS
       - name: Set OS output
         run: echo "os=${{ matrix.os }}" >> $GITHUB_ENV
+
       # Checkout the code
       - name: Checkout code
         uses: actions/checkout@v3
@@ -53,56 +52,59 @@ jobs:
           path: dist/*
           retention-days: 7
 
+  build-m1:
+    runs-on: macos-12
+    steps:
+      # Checkout the code
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # Install dependencies
+      - name: Install dependencies
+        run: |
+          # Install dependencies for M1
+          brew install dependencies
+
+      # Build M1 binary
+      - name: Build M1 binary
+        run: |
+          python build_m1.py
+
+      # Compress M1 macOS app
+      - name: Compress M1 macOS app
+        run: |
+          mkdir -p artifacts/modernizer-m1-latest
+          cd artifacts/modernizer-m1-latest
+          zip -r modernizer-macos-m1-latest.zip modernizer.app
+
+      # Upload M1 artifact
+      - name: Upload M1 artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: modernizer-macos-m1-latest
+          path: artifacts/modernizer-m1-latest/modernizer-macos-m1-latest.zip
+
   release:
     runs-on: ubuntu-latest
-    needs: build
-  
+    needs: [build, build-m1]
+
     steps:
       # Download all build artifacts
       - name: Download all artifacts
         uses: actions/download-artifact@v3
         with:
           path: artifacts
-  
+
       # Verify downloaded artifacts
       - name: Verify downloaded artifacts
         run: ls -R artifacts
-  
+
       # Create a compressed archive of the macOS Intel app
       - name: Compress macOS Intel app
         run: |
           cd artifacts/modernizer-macos-latest
           zip -r modernizer-macos-latest.zip modernizer.app
-  
-      # Build and compress M1 macOS app
-      - name: Build and Compress macOS M1 app
-        runs-on: macos-12
-        steps:
-          - name: Checkout code
-            uses: actions/checkout@v3
-  
-          - name: Install dependencies
-            run: |
-              # Install any dependencies your build requires
-              brew install dependencies
-  
-          - name: Build M1 binary
-            run: |
-              # Add build commands for M1 architecture
-              # Adjust the script to build for arm64 if needed
-              python build_m1.py
-  
-          - name: Compress M1 macOS app
-            run: |
-              cd artifacts/modernizer-m1-latest
-              zip -r modernizer-macos-m1-latest.zip modernizer.app
-  
-          - name: Upload M1 artifact
-            uses: actions/upload-artifact@v3
-            with:
-              name: modernizer-macos-m1-latest
-              path: artifacts/modernizer-m1-latest/modernizer-macos-m1-latest.zip
-  
+
       # Create GitHub Release
       - name: Create Release
         id: create_release
@@ -116,7 +118,7 @@ jobs:
             Multi-platform release of Text Modernizer.
           draft: false
           prerelease: false
-  
+
       # Upload macOS Intel artifact
       - name: Upload Release Asset (macOS Intel)
         uses: actions/upload-release-asset@v1
@@ -127,7 +129,7 @@ jobs:
           asset_path: artifacts/modernizer-macos-latest/modernizer-macos-latest.zip
           asset_name: modernizer-macos-latest.zip
           asset_content_type: application/zip
-  
+
       # Upload macOS M1 artifact
       - name: Upload Release Asset (macOS M1)
         uses: actions/upload-release-asset@v1
@@ -138,7 +140,7 @@ jobs:
           asset_path: artifacts/modernizer-m1-latest/modernizer-macos-m1-latest.zip
           asset_name: modernizer-macos-m1-latest.zip
           asset_content_type: application/zip
-  
+
       # Upload Ubuntu artifact
       - name: Upload Release Asset (Ubuntu)
         uses: actions/upload-release-asset@v1
@@ -149,7 +151,7 @@ jobs:
           asset_path: artifacts/modernizer-ubuntu-latest/modernizer
           asset_name: modernizer-ubuntu-latest
           asset_content_type: application/octet-stream
-  
+
       # Upload Windows artifact
       - name: Upload Release Asset (Windows)
         uses: actions/upload-release-asset@v1
@@ -160,4 +162,3 @@ jobs:
           asset_path: artifacts/modernizer-windows-latest/modernizer.exe
           asset_name: modernizer-windows-latest.exe
           asset_content_type: application/octet-stream
-  
