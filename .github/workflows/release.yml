@@ -34,14 +34,14 @@ jobs:
       # Build the executable
       - name: Build with PyInstaller
         run: |
-          pyinstaller --onefile --noconsole --add-data "settings.json:." modenizer.py
+          pyinstaller --onefile --noconsole --add-data "settings.json:." modernizer.py
 
       # Upload artifact
       - name: Upload artifact
         uses: actions/upload-artifact@v3
         with:
-          name: modenizer-${{ matrix.os }}
-          path: dist/modenizer*
+          name: modernizer-${{ matrix.os }}
+          path: dist/modernizer*
 
   release:
     needs: build
@@ -50,7 +50,7 @@ jobs:
       - name: Download build artifacts
         uses: actions/download-artifact@v3
         with:
-          name: modenizer-${{ matrix.os }}
+          name: modernizer-${{ matrix.os }}
           path: artifacts
 
       - name: Create Release
