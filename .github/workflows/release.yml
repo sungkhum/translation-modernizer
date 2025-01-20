@@ -81,10 +81,9 @@ jobs:
             Multi-platform release of Text Modernizer.
           draft: false
           prerelease: false
-      
+  
       # Upload macOS artifact
       - name: Upload Release Asset (macOS)
-        if: env.os == 'macos-latest'
         uses: actions/upload-release-asset@v1
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
@@ -94,7 +93,6 @@ jobs:
   
       # Upload Ubuntu artifact
       - name: Upload Release Asset (Ubuntu)
-        if: env.os == 'ubuntu-latest'
         uses: actions/upload-release-asset@v1
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
@@ -104,11 +102,9 @@ jobs:
   
       # Upload Windows artifact
       - name: Upload Release Asset (Windows)
-        if: env.os == 'windows-latest'
         uses: actions/upload-release-asset@v1
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: artifacts/modernizer-windows-latest/*
           asset_name: modernizer-windows-latest.exe
           asset_content_type: application/octet-stream
-  
