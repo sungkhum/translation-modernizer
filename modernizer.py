@@ -7,9 +7,14 @@ import threading
 import time
 import os
 import json
+import sys
 
+if getattr(sys, 'frozen', False):  # If running as a PyInstaller bundle
+    base_path = sys._MEIPASS
+else:
+    base_path = os.path.dirname(__file__)
 
-SETTINGS_FILE = "settings.json"
+SETTINGS_FILE = os.path.join(base_path, "settings.json")
 
 # Define constants for theme colors
 THEME = {
