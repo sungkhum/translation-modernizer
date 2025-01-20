@@ -12,8 +12,13 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
+    
+    
 
     steps:
+      # Output the OS
+      - name: Set OS output
+        run: echo "os=${{ matrix.os }}" >> $GITHUB_ENV
       # Checkout the code
       - name: Checkout code
         uses: actions/checkout@v3
@@ -76,33 +81,34 @@ jobs:
             Multi-platform release of Text Modernizer.
           draft: false
           prerelease: false
-  
+      
       # Upload macOS artifact
-      - name: Upload Release Assets (macOS)
-        if: contains(matrix.os, 'macos')
+      - name: Upload Release Asset (macOS)
+        if: env.os == 'macos-latest'
         uses: actions/upload-release-asset@v1
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: artifacts/modernizer-macos-latest/*
-          asset_name: modernizer-macos-latest
-          asset_content_type: application/octet-stream
+          asset_name: modernizer-macos-latest.zip
+          asset_content_type: application/zip
   
       # Upload Ubuntu artifact
-      - name: Upload Release Assets (Ubuntu)
-        if: contains(matrix.os, 'ubuntu')
+      - name: Upload Release Asset (Ubuntu)
+        if: env.os == 'ubuntu-latest'
         uses: actions/upload-release-asset@v1
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: artifacts/modernizer-ubuntu-latest/*
-          asset_name: modernizer-ubuntu-latest
-          asset_content_type: application/octet-stream
+          asset_name: modernizer-ubuntu-latest.zip
+          asset_content_type: application/zip
   
       # Upload Windows artifact
-      - name: Upload Release Assets (Windows)
-        if: contains(matrix.os, 'windows')
+      - name: Upload Release Asset (Windows)
+        if: env.os == 'windows-latest'
         uses: actions/upload-release-asset@v1
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: artifacts/modernizer-windows-latest/*
-          asset_name: modernizer-windows-latest
+          asset_name: modernizer-windows-latest.exe
           asset_content_type: application/octet-stream
+  
