@@ -3,8 +3,8 @@ name: Build and Release
 on:
   push:
     tags:
-      - "v*"  # Triggers when a new version tag is pushed
-  workflow_dispatch:  # Allows manual trigger
+      - "v*"  # Trigger on version tags
+  workflow_dispatch:  # Allow manual trigger
 
 jobs:
   build:
@@ -44,15 +44,17 @@ jobs:
           path: dist/modernizer*
 
   release:
-    needs: build
     runs-on: ubuntu-latest
+    needs: build
+
     steps:
-      - name: Download build artifacts
+      # Download all build artifacts
+      - name: Download all artifacts
         uses: actions/download-artifact@v3
         with:
-          name: modernizer-${{ matrix.os }}
           path: artifacts
 
+      # Create GitHub Release
       - name: Create Release
         uses: actions/create-release@v1
         env:
