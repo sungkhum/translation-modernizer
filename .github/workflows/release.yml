@@ -87,9 +87,9 @@ jobs:
         uses: actions/upload-release-asset@v1
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: artifacts/modernizer-macos-latest/*
-          asset_name: modernizer-macos-latest.zip
-          asset_content_type: application/zip
+          asset_path: artifacts/modernizer-macos-latest/modernizer.app
+          asset_name: modernizer-macos-latest.app
+          asset_content_type: application/octet-stream
   
       # Upload Ubuntu artifact
       - name: Upload Release Asset (Ubuntu)
