@@ -53,30 +53,31 @@ jobs:
           retention-days: 7
 
   build-m1:
-    runs-on: macos-latest
+    runs-on: macos-latest  # Or macos-13, macos-14, etc.
     steps:
       # Checkout the code
       - name: Checkout code
         uses: actions/checkout@v3
-
+  
       # Install dependencies
       - name: Install dependencies
         run: |
-          # Install dependencies for M1
-          brew install dependencies
-
+          brew update
+          brew install python3  # Replace with actual dependencies
+          # Add other required dependencies here
+  
       # Build M1 binary
       - name: Build M1 binary
         run: |
           python build_m1.py
-
+  
       # Compress M1 macOS app
       - name: Compress M1 macOS app
         run: |
           mkdir -p artifacts/modernizer-m1-latest
           cd artifacts/modernizer-m1-latest
           zip -r modernizer-macos-m1-latest.zip modernizer.app
-
+  
       # Upload M1 artifact
       - name: Upload M1 artifact
         uses: actions/upload-artifact@v3
