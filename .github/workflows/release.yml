@@ -83,6 +83,18 @@ jobs:
       - name: Verify downloaded artifacts
         run: ls -R artifacts
 
+            # Compress macOS artifacts
+      - name: Compress macOS artifacts
+        run: |
+          mkdir -p artifacts/compressed
+          for platform in intel arm64; do
+            if [ -d "artifacts/modernizer-macos-latest-$platform" ]; then
+              zip -r artifacts/compressed/modernizer-macos-latest-$platform.zip artifacts/modernizer-macos-latest-$platform
+            else
+              echo "Directory artifacts/modernizer-macos-latest-$platform does not exist"
+            fi
+          done
+
       # Compress macOS artifacts
       - name: Compress macOS artifacts
         run: |
@@ -90,7 +102,23 @@ jobs:
           for platform in intel arm64; do
             if [ -d "artifacts/modernizer-macos-latest-$platform" ]; then
               zip -r artifacts/compressed/modernizer-macos-latest-$platform.zip artifacts/modernizer-macos-latest-$platform
+            else
+              echo "Directory artifacts/modernizer-macos-latest-$platform does not exist"
             fi
+          done
+
+      # Compress other OS artifacts
+      - name: Compress other OS artifacts
+        run: |
+          mkdir -p artifacts/compressed
+          for os in ubuntu windows; do
+            for platform in intel arm64; do
+              if [ -d "artifacts/modernizer-$os-latest-$platform" ]; then
+                zip -r artifacts/compressed/modernizer-$os-latest-$platform.zip artifacts/modernizer-$os-latest-$platform
+              else
+                echo "Directory artifacts/modernizer-$os-latest-$platform does not exist"
+              fi
+            done
           done
 
       # Create GitHub Release
