@@ -83,65 +83,93 @@ jobs:
       - name: Verify downloaded artifacts
         run: ls -R artifacts
 
-            # Compress macOS artifacts
-      - name: Compress macOS artifacts
-        run: |
-          mkdir -p artifacts/compressed
-          for platform in intel arm64; do
-            if [ -d "artifacts/modernizer-macos-latest-$platform" ]; then
-              zip -r artifacts/compressed/modernizer-macos-latest-$platform.zip artifacts/modernizer-macos-latest-$platform
-            else
-              echo "Directory artifacts/modernizer-macos-latest-$platform does not exist"
-            fi
-          done
-
       # Compress macOS artifacts
       - name: Compress macOS artifacts
         run: |
           mkdir -p artifacts/compressed
-          for platform in intel arm64; do
-            if [ -d "artifacts/modernizer-macos-latest-$platform" ]; then
-              zip -r artifacts/compressed/modernizer-macos-latest-$platform.zip artifacts/modernizer-macos-latest-$platform
-            else
-              echo "Directory artifacts/modernizer-macos-latest-$platform does not exist"
-            fi
-          done
+          zip -r artifacts/compressed/modernizer-macos-latest-intel.zip artifacts/modernizer-macos-latest-intel
+          zip -r artifacts/compressed/modernizer-macos-latest-arm64.zip artifacts/modernizer-macos-latest-arm64
 
-      # Compress other OS artifacts
-      - name: Compress other OS artifacts
+      # Compress Ubuntu artifacts
+      - name: Compress Ubuntu artifacts
         run: |
           mkdir -p artifacts/compressed
-          for os in ubuntu windows; do
-            for platform in intel arm64; do
-              if [ -d "artifacts/modernizer-$os-latest-$platform" ]; then
-                zip -r artifacts/compressed/modernizer-$os-latest-$platform.zip artifacts/modernizer-$os-latest-$platform
-              else
-                echo "Directory artifacts/modernizer-$os-latest-$platform does not exist"
-              fi
-            done
-          done
+          zip -r artifacts/compressed/modernizer-ubuntu-latest-intel.zip artifacts/modernizer-ubuntu-latest-intel
+          zip -r artifacts/compressed/modernizer-ubuntu-latest-arm64.zip artifacts/modernizer-ubuntu-latest-arm64
 
-      # Create GitHub Release
-      - name: Create Release
-        id: create_release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.MYTOKEN }}
-        with:
-          tag_name: ${{ github.ref_name }}
-          release_name: Release ${{ github.ref_name }}
-          body: |
-            Multi-platform release of Text Modernizer.
-          draft: false
-          prerelease: false
+      # Compress Windows artifacts
+      - name: Compress Windows artifacts
+        run: |
+          mkdir -p artifacts/compressed
+          zip -r artifacts/compressed/modernizer-windows-latest-intel.zip artifacts/modernizer-windows-latest-intel
+          zip -r artifacts/compressed/modernizer-windows-latest-arm64.zip artifacts/modernizer-windows-latest-arm64
 
-      # Upload artifacts
-      - name: Upload Release Assets
+      # Debug compression results
+      - name: List compressed artifacts
+        run: ls -R artifacts/compressed
+
+      # Upload macOS Intel artifact
+      - name: Upload macOS Intel Artifact
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.MYTOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: artifacts/compressed/*.zip
-          asset_name: ${{ matrix.platform }}.zip
+          asset_path: artifacts/compressed/modernizer-macos-latest-intel.zip
+          asset_name: modernizer-macos-latest-intel.zip
+          asset_content_type: application/zip
+
+      # Upload macOS ARM64 artifact
+      - name: Upload macOS ARM64 Artifact
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.MYTOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: artifacts/compressed/modernizer-macos-latest-arm64.zip
+          asset_name: modernizer-macos-latest-arm64.zip
+          asset_content_type: application/zip
+
+      # Upload Ubuntu Intel artifact
+      - name: Upload Ubuntu Intel Artifact
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.MYTOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: artifacts/compressed/modernizer-ubuntu-latest-intel.zip
+          asset_name: modernizer-ubuntu-latest-intel.zip
+          asset_content_type: application/zip
+
+      # Upload Ubuntu ARM64 artifact
+      - name: Upload Ubuntu ARM64 Artifact
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.MYTOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: artifacts/compressed/modernizer-ubuntu-latest-arm64.zip
+          asset_name: modernizer-ubuntu-latest-arm64.zip
+          asset_content_type: application/zip
+
+      # Upload Windows Intel artifact
+      - name: Upload Windows Intel Artifact
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.MYTOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: artifacts/compressed/modernizer-windows-latest-intel.zip
+          asset_name: modernizer-windows-latest-intel.zip
+          asset_content_type: application/zip
+
+      # Upload Windows ARM64 artifact
+      - name: Upload Windows ARM64 Artifact
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.MYTOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: artifacts/compressed/modernizer-windows-latest-arm64.zip
+          asset_name: modernizer-windows-latest-arm64.zip
           asset_content_type: application/zip
