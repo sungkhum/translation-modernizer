@@ -12,11 +12,25 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
+        platform: [intel, arm64]
+        include:
+          # Ensure ARM64 builds only for macOS
+          - os: macos-latest
+            platform: arm64
+          - os: macos-latest
+            platform: intel
+          # For other OSes, default to intel
+          - os: ubuntu-latest
+            platform: intel
+          - os: windows-latest
+            platform: intel
 
     steps:
-      # Output the OS
-      - name: Set OS output
-        run: echo "os=${{ matrix.os }}" >> $GITHUB_ENV
+      # Set OS and platform output
+      - name: Set OS and platform output
+        run: |
+          echo "os=${{ matrix.os }}" >> $GITHUB_ENV
+          echo "platform=${{ matrix.platform }}" >> $GITHUB_ENV
 
       # Checkout the code
       - name: Checkout code
@@ -39,6 +53,8 @@ jobs:
       - name: Build with PyInstaller
         run: |
           pyinstaller --onefile --noconsole --add-data "settings.json:." modernizer.py
+        env:
+          ARCHFLAGS: "-arch ${matrix.platform}"  # macOS-specific flag for architecture
 
       # Verify the contents of the dist directory
       - name: Verify dist directory
@@ -48,66 +64,13 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-artifact@v3
         with:
-          name: modernizer-${{ matrix.os }}
+          name: modernizer-${{ matrix.os }}-${{ matrix.platform }}
           path: dist/*
           retention-days: 7
 
-  build-m1:
-    runs-on: macos-14
-    steps:
-      # Checkout the code
-      - name: Checkout code
-        uses: actions/checkout@v3
-  
-      # Set up Python virtual environment and install dependencies
-      - name: Set up Python virtual environment
-        run: |
-          python3 -m venv .venv
-          source .venv/bin/activate
-          python3 -m pip install --upgrade pip
-          pip install -r requirements.txt
-          pip install pyinstaller
-  
-      # Build M1 binary
-      - name: Build M1 binary
-        run: |
-          source .venv/bin/activate
-          pyinstaller --onefile --noconsole --add-data "settings.json:." modernizer.py
-  
-      # Debug dist directory
-      - name: Debug dist directory
-        run: ls -R dist
-  
-      # Ensure dist directory and modernizer exist
-      - name: Verify dist and modernizer
-        run: |
-          if [ ! -d "dist" ]; then
-            echo "Error: dist directory does not exist."
-            exit 1
-          fi
-          if [ ! -f "dist/modernizer" ]; then
-            echo "Error: modernizer file does not exist in dist."
-            exit 1
-          fi
-  
-      # Compress M1 macOS app
-      - name: Compress M1 macOS app
-        run: |
-          mkdir -p artifacts/modernizer-m1-latest
-          mv dist/modernizer artifacts/modernizer-m1-latest/modernizer.app
-          cd artifacts/modernizer-m1-latest
-          zip -r modernizer-macos-m1-latest.zip modernizer.app
-  
-      # Upload M1 artifact
-      - name: Upload M1 artifact
-        uses: actions/upload-artifact@v3
-        with:
-          name: modernizer-macos-m1-latest
-          path: artifacts/modernizer-m1-latest/modernizer-macos-m1-latest.zip
-
   release:
     runs-on: ubuntu-latest
-    needs: [build, build-m1]
+    needs: build
 
     steps:
       # Download all build artifacts
@@ -120,11 +83,15 @@ jobs:
       - name: Verify downloaded artifacts
         run: ls -R artifacts
 
-      # Create a compressed archive of the macOS Intel app
-      - name: Compress macOS Intel app
+      # Compress macOS artifacts
+      - name: Compress macOS artifacts
         run: |
-          cd artifacts/modernizer-macos-latest
-          zip -r modernizer-macos-latest.zip modernizer.app
+          mkdir -p artifacts/compressed
+          for platform in intel arm64; do
+            if [ -d "artifacts/modernizer-macos-latest-$platform" ]; then
+              zip -r artifacts/compressed/modernizer-macos-latest-$platform.zip artifacts/modernizer-macos-latest-$platform
+            fi
+          done
 
       # Create GitHub Release
       - name: Create Release
@@ -140,46 +107,13 @@ jobs:
           draft: false
           prerelease: false
 
-      # Upload macOS Intel artifact
-      - name: Upload Release Asset (macOS Intel)
+      # Upload artifacts
+      - name: Upload Release Assets
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.MYTOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: artifacts/modernizer-macos-latest/modernizer-macos-latest.zip
-          asset_name: modernizer-macos-latest.zip
+          asset_path: artifacts/compressed/*.zip
+          asset_name: ${{ matrix.platform }}.zip
           asset_content_type: application/zip
-
-      # Upload macOS M1 artifact
-      - name: Upload Release Asset (macOS M1)
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.MYTOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: artifacts/modernizer-macos-m1-latest/modernizer-macos-m1-latest.zip
-          asset_name: modernizer-macos-m1-latest.zip
-          asset_content_type: application/zip
-
-      # Upload Ubuntu artifact
-      - name: Upload Release Asset (Ubuntu)
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.MYTOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: artifacts/modernizer-ubuntu-latest/modernizer
-          asset_name: modernizer-ubuntu-latest
-          asset_content_type: application/octet-stream
-
-      # Upload Windows artifact
-      - name: Upload Release Asset (Windows)
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.MYTOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: artifacts/modernizer-windows-latest/modernizer.exe
-          asset_name: modernizer-windows-latest.exe
-          asset_content_type: application/octet-stream
