@@ -59,22 +59,30 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
   
+      # Debug file structure
+      - name: List repository files
+        run: ls -R
+  
       # Install dependencies
       - name: Install dependencies
         run: |
           brew update
           brew install python3  # Replace with actual dependencies
-          # Add other required dependencies here
   
-      # Build M1 binary
+      # Build M1 binary using pyinstaller
       - name: Build M1 binary
         run: |
-          python build_m1.py
+          python3 -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pyinstaller
+          pyinstaller --onefile --noconsole --add-data "settings.json:." modernizer.py
   
       # Compress M1 macOS app
       - name: Compress M1 macOS app
         run: |
           mkdir -p artifacts/modernizer-m1-latest
+          cd dist
+          mv modernizer artifacts/modernizer-m1-latest/modernizer.app
           cd artifacts/modernizer-m1-latest
           zip -r modernizer-macos-m1-latest.zip modernizer.app
   
