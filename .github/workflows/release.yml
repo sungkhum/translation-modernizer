@@ -68,17 +68,19 @@ jobs:
           cd artifacts/${{ matrix.artifact_name }}
           zip -r ${{ matrix.artifact_name }}.zip ${{ matrix.build_name }}.app
 
-      # For Linux and Windows, just move the file (and rename on Windows if needed)
-      - name: Prepare Linux/Windows artifact
-        if: (matrix.os == 'ubuntu-latest' || matrix.os == 'windows-latest')
+      - name: Prepare Linux artifact
+        if: ${{ matrix.os == 'ubuntu-latest' }}
         run: |
-          mkdir -p artifacts/${{ matrix.artifact_name }}
-          # If on Windows, the file is modernizer.exe, otherwise it's modernizer
-          if [ "${{ matrix.os }}" = "windows-latest" ]; then
-            mv dist/modernizer.exe artifacts/${{ matrix.artifact_name }}/${{ matrix.build_name }}
-          else
-            mv dist/modernizer artifacts/${{ matrix.artifact_name }}/${{ matrix.build_name }}
-          fi
+          mkdir -p artifacts/modernizer-ubuntu-latest
+          mv dist/modernizer artifacts/modernizer-ubuntu-latest/modernizer
+        shell: bash
+      
+      - name: Prepare Windows artifact
+        if: ${{ matrix.os == 'windows-latest' }}
+        run: |
+          mkdir -p artifacts/modernizer-windows-latest
+          mv dist/modernizer.exe artifacts/modernizer-windows-latest/modernizer.exe
+        shell: bash
 
       # Upload artifacts
       - name: Upload artifact
