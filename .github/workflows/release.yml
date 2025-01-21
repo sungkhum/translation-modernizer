@@ -72,14 +72,29 @@ jobs:
       - name: Build M1 binary
         run: |
           source .venv/bin/activate
-          pyinstaller --onefile --noconsole --add-data "settings.json:." modernizer.py
+          pyinstaller --onefile --noconsole --add-data "settings.json:." --name modernizer modernizer.py
+  
+      # Debug dist directory
+      - name: Debug dist directory
+        run: ls -R dist
+  
+      # Ensure dist directory and modernizer exist
+      - name: Verify dist and modernizer
+        run: |
+          if [ ! -d "dist" ]; then
+            echo "Error: dist directory does not exist."
+            exit 1
+          fi
+          if [ ! -f "dist/modernizer" ]; then
+            echo "Error: modernizer file does not exist in dist."
+            exit 1
+          fi
   
       # Compress M1 macOS app
       - name: Compress M1 macOS app
         run: |
           mkdir -p artifacts/modernizer-m1-latest
-          cd dist
-          mv modernizer artifacts/modernizer-m1-latest/modernizer.app
+          mv dist/modernizer artifacts/modernizer-m1-latest/modernizer.app
           cd artifacts/modernizer-m1-latest
           zip -r modernizer-macos-m1-latest.zip modernizer.app
   
@@ -89,7 +104,6 @@ jobs:
         with:
           name: modernizer-macos-m1-latest
           path: artifacts/modernizer-m1-latest/modernizer-macos-m1-latest.zip
-  
 
   release:
     runs-on: ubuntu-latest
