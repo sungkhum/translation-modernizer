@@ -72,7 +72,7 @@ jobs:
       - name: Build M1 binary
         run: |
           source .venv/bin/activate
-          pyinstaller --onefile --noconsole --add-data "settings.json:." --name modernizer modernizer.py
+          pyinstaller --onefile --noconsole --add-data "settings.json:." modernizer.py
   
       # Debug dist directory
       - name: Debug dist directory
