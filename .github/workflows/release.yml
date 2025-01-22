@@ -1,4 +1,4 @@
-name: Build Executables
+name: Build Executables and Create Release
 
 on:
   push:
@@ -40,21 +40,21 @@ jobs:
         pyinstaller --onefile --noconsole --add-data "settings.json:." ${{ env.MAIN_PY_FILE }}
       working-directory: ./
 
-    - name: Create Artifact (Windows)
+    - name: Upload Artifact (Windows)
       if: matrix.os == 'windows-latest'
       uses: actions/upload-artifact@v3
       with:
         name: windows-executables
         path: dist/
 
-    - name: Create Artifact (Linux)
+    - name: Upload Artifact (Linux)
       if: matrix.os == 'ubuntu-latest'
       uses: actions/upload-artifact@v3
       with:
         name: linux-executables
         path: dist/
 
-    - name: Create Artifact (macOS)
+    - name: Upload Artifact (macOS)
       if: matrix.os == 'macos-latest'
       uses: actions/upload-artifact@v3
       with:
@@ -63,3 +63,60 @@ jobs:
 
     - name: List files in dist folder
       run: ls -R ./dist/
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Download Artifacts
+      uses: actions/download-artifact@v3
+      with:
+        path: ./artifacts
+
+    - name: Create Release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: v${{ github.run_number }}
+        release_name: Release v${{ github.run_number }}
+        body: |
+          This release includes the following executables:
+          - Windows
+          - Linux
+          - macOS
+        draft: false
+        prerelease: false
+
+    - name: Upload Release Assets (Windows)
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./artifacts/windows-executables
+        asset_name: windows-executables.zip
+        asset_content_type: application/zip
+
+    - name: Upload Release Assets (Linux)
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./artifacts/linux-executables
+        asset_name: linux-executables.zip
+        asset_content_type: application/zip
+
+    - name: Upload Release Assets (macOS)
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./artifacts/macos-executables
+        asset_name: macos-executables.zip
+        asset_content_type: application/zip
