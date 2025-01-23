@@ -10,23 +10,27 @@ jobs:
     name: Create Release
     runs-on: ubuntu-latest
     steps:
-    - name: Create Release
-      id: create_release
-      uses: actions/create-release@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        tag_name: ${{ github.ref }}
-        release_name: Release ${{ github.ref }}
-        draft: false
-        prerelease: false
-    - name: Output Release URL File
-      run: mkdir -p release_url && echo "${{ steps.create_release.outputs.upload_url }}" > release_url/release_url.txt
-    - name: Save Release URL File for publish
-      uses: actions/upload-artifact@v4
-      with:
-        name: release_url
-        path: release_url/release_url.txt
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: Release ${{ github.ref }}
+          draft: false
+          prerelease: false
+
+      - name: Output Release URL File
+        run: |
+          mkdir -p release_url
+          echo "${{ steps.create_release.outputs.upload_url }}" > release_url/release_url.txt
+
+      - name: Save Release URL File for publish
+        uses: actions/upload-artifact@v4
+        with:
+          name: release_url
+          path: release_url
 
   build:
     name: Build packages
@@ -53,41 +57,56 @@ jobs:
             CMD_BUILD: pyinstaller -F -n modernizer-${{ github.ref_name }}-Linux-x64 --add-data "settings.json:." modernizer.py
             OUT_FILE_NAME: modernizer-${{ github.ref_name }}-Linux-x64
             ASSET_MIME: application/zip
+
     steps:
-    - uses: actions/checkout@v1
-    - name: Set up Python 3.12
-      uses: actions/setup-python@v2
-      with:
-        python-version: 3.12
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt     
-    - name: Install PyInstaller
-      run: pip install pyinstaller   
-    - name: Build with pyinstaller for ${{ matrix.TARGET }}
-      run: ${{ matrix.CMD_BUILD }}
-    - name: Load Release URL File from release job
-      uses: actions/download-artifact@v4
-      with:
-        name: release_url
-    - name: Debug Release URL File
-      run: |
-        ls -la release_url
-        cat release_url/release_url.txt || echo "File not found!"
-    - name: Get Release File Name & Upload URL
-      id: get_release_info
-      shell: bash
-      run: |
-        value=`cat release_url/release_url.txt`
-        echo ::set-output name=upload_url::$value        
-    - name: Upload Release Asset
-      id: upload-release-asset
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ steps.get_release_info.outputs.upload_url }}
-        asset_path: ./dist/${{ matrix.OUT_FILE_NAME }}
-        asset_name: ${{ matrix.OUT_FILE_NAME }}
-        asset_content_type: ${{ matrix.ASSET_MIME }}
+      - uses: actions/checkout@v1
+      
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.12
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt     
+      
+      - name: Install PyInstaller
+        run: pip install pyinstaller   
+      
+      - name: Build with pyinstaller for ${{ matrix.TARGET }}
+        run: ${{ matrix.CMD_BUILD }}
+      
+      - name: Load Release URL File from release job
+        uses: actions/download-artifact@v4
+        with:
+          name: release_url
+          path: ./artifact
+      
+      - name: Debug Release URL File
+        run: |
+          ls -la artifact
+          cat artifact/release_url.txt || echo "File not found!"
+      
+      - name: Get Release File Name & Upload URL
+        id: get_release_info
+        shell: bash
+        run: |
+          if [[ -f "artifact/release_url.txt" ]]; then
+            value=$(cat artifact/release_url.txt)
+            echo ::set-output name=upload_url::$value
+          else
+            echo "Error: release_url.txt not found"
+            exit 1
+          fi        
+      
+      - name: Upload Release Asset
+        id: upload-release-asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.get_release_info.outputs.upload_url }}
+          asset_path: ./dist/${{ matrix.OUT_FILE_NAME }}
+          asset_name: ${{ matrix.OUT_FILE_NAME }}
+          asset_content_type: ${{ matrix.ASSET_MIME }}
