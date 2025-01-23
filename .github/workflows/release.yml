@@ -85,9 +85,9 @@ jobs:
       
       - name: Debug Release URL File
         run: |
-          if [[ "$RUNNER_OS" == "Windows" ]]; then
-            Get-ChildItem artifact
-            Get-Content artifact/release_url.txt || Write-Output "File not found!"
+          if [ "$RUNNER_OS" = "Windows" ]; then
+            dir artifact
+            type artifact/release_url.txt || echo "File not found!"
           else
             ls -la artifact
             cat artifact/release_url.txt || echo "File not found!"
