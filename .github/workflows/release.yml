@@ -12,10 +12,10 @@ jobs:
 
     steps:
       - name: Check out code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: Set up Python
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v4
         with:
           python-version: 3.8
 
@@ -23,17 +23,16 @@ jobs:
         run: pip install --upgrade pip && pip install -r requirements.txt
 
       - name: Build with PyInstaller (Windows)
-        # On Windows, PyInstaller uses ";" for --add-data
+        # On Windows, use ";" for --add-data
         run: pyinstaller --onefile --noconsole --add-data "settings.json;." modernizer.py
 
-      - name: Rename and archive output
+      - name: Rename and prepare artifacts
         run: |
           mkdir dist_output
-          # PyInstaller places .exe in the "dist" folder
           move dist\modernizer.exe dist_output\modernizer-windows.exe
 
-      - name: Upload artifact (Windows EXE)
-        uses: actions/upload-artifact@v2
+      - name: Upload artifact (Windows)
+        uses: actions/upload-artifact@v4
         with:
           name: windows-binary
           path: dist_output
@@ -44,10 +43,10 @@ jobs:
 
     steps:
       - name: Check out code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: Set up Python
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v4
         with:
           python-version: 3.8
 
@@ -55,17 +54,16 @@ jobs:
         run: pip install --upgrade pip && pip install -r requirements.txt
 
       - name: Build with PyInstaller (macOS)
-        # On macOS/Linux, PyInstaller uses ":" for --add-data
+        # On macOS, use ":" for --add-data
         run: pyinstaller --onefile --noconsole --add-data "settings.json:." modernizer.py
 
-      - name: Rename and archive output
+      - name: Rename and prepare artifacts
         run: |
           mkdir dist_output
-          # On macOS, PyInstaller places the binary as "modernizer" in "dist"
           mv dist/modernizer dist_output/modernizer-macos
 
-      - name: Upload artifact (macOS binary)
-        uses: actions/upload-artifact@v2
+      - name: Upload artifact (macOS)
+        uses: actions/upload-artifact@v4
         with:
           name: mac-binary
           path: dist_output
@@ -77,14 +75,16 @@ jobs:
 
     steps:
       - name: Download Windows artifact
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v4
         with:
-          name: windows-binary
+          pattern: windows-binary
+          path: windows-binary
 
       - name: Download macOS artifact
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v4
         with:
-          name: mac-binary
+          pattern: mac-binary
+          path: mac-binary
 
       - name: Create or Update Release
         id: create_release
