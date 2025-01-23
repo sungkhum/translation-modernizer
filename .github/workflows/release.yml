@@ -45,12 +45,12 @@ jobs:
 
       - name: Create release artifact
         run: |
-          mkdir -p release
           if [ "${{ matrix.os }}" == "windows-latest" ]; then
-            mkdir release
+            if not exist release mkdir release
             move dist\modernizer.exe release\modernizer.exe
-            Compress-Archive -Path release\modernizer.exe -DestinationPath release\modernizer-${{ matrix.platform }}-${{ github.run_id }}.zip
+            powershell Compress-Archive -Path release\modernizer.exe -DestinationPath release\modernizer-${{ matrix.platform }}-${{ github.run_id }}.zip
           else
+            mkdir -p release
             mv dist/modernizer release/modernizer
             cd release
             zip modernizer-${{ matrix.platform }}-${{ github.run_id }}.${{ matrix.ext }} *
