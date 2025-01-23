@@ -30,6 +30,12 @@ jobs:
           pyinstaller --onefile --noconsole --add-data "settings.json:." modernizer.py
           ls -alh dist/  # List the contents of the dist directory for verification
 
+      - name: Compress Executable
+        run: |
+          cd dist
+          zip modernizer-macos.zip modernizer
+          ls -alh  # Verify the ZIP file creation
+
       - name: Create Release
         uses: ncipollo/release-action@v1
         with:
@@ -37,5 +43,5 @@ jobs:
           name: Release ${{ github.ref }}
           draft: false
           prerelease: false
-          artifacts: dist/modernizer
+          artifacts: dist/modernizer-macos.zip
           token: ${{ secrets.GITHUB_TOKEN }}
