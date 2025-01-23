@@ -31,7 +31,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.x'
+          python-version: '3.9'
 
       - name: Install dependencies
         run: |
@@ -47,13 +47,15 @@ jobs:
         run: |
           mkdir -p release
           if [ "${{ matrix.os }}" == "windows-latest" ]; then
-            mv dist/modernizer.exe release/modernizer.exe
+            mkdir release
+            move dist\modernizer.exe release\modernizer.exe
+            Compress-Archive -Path release\modernizer.exe -DestinationPath release\modernizer-${{ matrix.platform }}-${{ github.run_id }}.zip
           else
             mv dist/modernizer release/modernizer
+            cd release
+            zip modernizer-${{ matrix.platform }}-${{ github.run_id }}.${{ matrix.ext }} *
+            cd ..
           fi
-          cd release
-          zip modernizer-${{ matrix.platform }}-${{ github.run_id }}.${{ matrix.ext }} *
-          cd ..
         shell: bash
 
       - name: Upload artifact
