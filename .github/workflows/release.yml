@@ -1,24 +1,37 @@
-name: Build and Release
+name: Build and Release Modernizer
 
 on:
   push:
     tags:
       - 'v*'
+  workflow_dispatch:
 
 jobs:
   build:
+    name: Build and Release Assets
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [windows-latest, macos-latest]
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        include:
+          - os: ubuntu-latest
+            platform: Linux
+            ext: tar.gz
+          - os: macos-latest
+            platform: macOS
+            ext: zip
+          - os: windows-latest
+            platform: Windows
+            ext: zip
+
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: Set up Python
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v4
         with:
-          python-version: '3.9'
+          python-version: '3.x'
 
       - name: Install dependencies
         run: |
@@ -29,62 +42,42 @@ jobs:
       - name: Build executable
         run: |
           pyinstaller --onefile --noconsole --add-data "settings.json:." modernizer.py
+
+      - name: Create release artifact
+        run: |
+          mkdir -p release
+          if [ "${{ matrix.os }}" == "windows-latest" ]; then
+            mv dist/modernizer.exe release/modernizer.exe
+          else
+            mv dist/modernizer release/modernizer
+          fi
+          cd release
+          zip modernizer-${{ matrix.platform }}-${{ github.run_id }}.${{ matrix.ext }} *
+          cd ..
         shell: bash
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
-          name: ${{ matrix.os }}-modernizer
-          path: |
-            dist/modernizer.exe
-            dist/modernizer
-          if-no-files-found: ignore
+          name: modernizer-${{ matrix.platform }}
+          path: release/modernizer-${{ matrix.platform }}-${{ github.run_id }}.${{ matrix.ext }}
 
   release:
-    runs-on: ubuntu-latest
+    name: Create Release
     needs: build
+    runs-on: ubuntu-latest
+
     steps:
-      - name: Download Windows artifact
-        uses: actions/download-artifact@v2
+      - name: Download build artifacts
+        uses: actions/download-artifact@v3
         with:
-          name: windows-latest-modernizer
-        if: always()
+          path: artifacts
 
-      - name: Download macOS artifact
-        uses: actions/download-artifact@v2
+      - name: Create GitHub Release
+        uses: ncipollo/release-action@v1
         with:
-          name: macos-latest-modernizer
-        if: always()
-
-      - name: Create Release
-        id: create_release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: ${{ github.ref }}
-          release_name: Release ${{ github.ref }}
-          draft: false
-          prerelease: false
-
-      - name: Upload Windows asset
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: dist/modernizer.exe
-          asset_name: modernizer-windows.exe
-          asset_content_type: application/octet-stream
-        if: always()
-
-      - name: Upload macOS asset
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: dist/modernizer
-          asset_name: modernizer-macos
-          asset_content_type: application/octet-stream
-        if: always()
+          token: ${{ secrets.GITHUB_TOKEN }}
+          name: Release ${{ github.ref_name }}
+          tag: ${{ github.ref_name }}
+          artifacts: |
+            artifacts/*
