@@ -1,31 +1,41 @@
-name: Build
+name: Build and Release macOS Executable
 
 on:
   push:
     tags:
-      - 'v*' # Push events to matching v*, i.e. v1.0, v20.15.10
+      - 'v*'  # Triggers the workflow on version tags like v1.0, v2.1, etc.
 
 jobs:
   build:
+    name: Build Executable
     runs-on: macos-latest
+
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout Code
+        uses: actions/checkout@v3
 
       - name: Set up Python
-        uses: actions/setup-python@v3
+        uses: actions/setup-python@v4
         with:
-          python-version: 3.9
+          python-version: '3.9'  # Specify your required Python version
 
-      - name: Install dependencies
+      - name: Install Dependencies
         run: |
+          python -m pip install --upgrade pip
           pip install -r requirements.txt
+          pip install pyinstaller
 
-      - name: Build macOS app
+      - name: Build Executable
         run: |
           pyinstaller --onefile --noconsole --add-data "settings.json:." modernizer.py
+          ls -alh dist/  # List the contents of the dist directory for verification
 
-      - name: Upload artifact
-        uses: actions/upload-artifact@v2
+      - name: Create Release
+        uses: ncipollo/release-action@v1
         with:
-          name: macos-release
-          path: dist/
+          tag: ${{ github.ref }}
+          name: Release ${{ github.ref }}
+          draft: false
+          prerelease: false
+          artifacts: dist/modernizer
+          token: ${{ secrets.GITHUB_TOKEN }}
