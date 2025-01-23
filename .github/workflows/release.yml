@@ -1,4 +1,4 @@
-name: Build and Release Modernizer
+name: Build and Release Assets
 
 on:
   push:
@@ -8,21 +8,11 @@ on:
 
 jobs:
   build:
-    name: Build and Release Assets
+    name: Build Release Assets
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
-        include:
-          - os: ubuntu-latest
-            platform: Linux
-            ext: tar.gz
-          - os: macos-latest
-            platform: macOS
-            ext: zip
-          - os: windows-latest
-            platform: Windows
-            ext: zip
+        os: [windows-latest, ubuntu-latest, macos-latest]
 
     steps:
       - name: Checkout code
@@ -31,7 +21,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.9'
+          python-version: 3.x
 
       - name: Install dependencies
         run: |
@@ -42,29 +32,15 @@ jobs:
       - name: Build executable
         run: |
           pyinstaller --onefile --noconsole --add-data "settings.json:." modernizer.py
-
-      - name: Create release artifact
-        run: |
-          if [ "${{ matrix.os }}" == "windows-latest" ]; then
-            mkdir -p release
-            powershell mv dist\modernizer.exe release\modernizer.exe
-            powershell Compress-Archive -Path release\modernizer.exe -DestinationPath release\modernizer-${{ matrix.platform }}-${{ github.run_id }}.zip
-          else
-            mkdir -p release
-            mv dist/modernizer release/modernizer
-            cd release
-            zip modernizer-${{ matrix.platform }}-${{ github.run_id }}.${{ matrix.ext }} *
-            cd ..
-          fi
         shell: bash
-
-  
 
       - name: Upload artifact
         uses: actions/upload-artifact@v3
         with:
-          name: modernizer-${{ matrix.platform }}
-          path: release/modernizer-${{ matrix.platform }}-${{ github.run_id }}.${{ matrix.ext }}
+          name: ${{ matrix.os }}-modernizer
+          path: |
+            dist/modernizer.exe       # For Windows
+            dist/modernizer          # For Ubuntu and macOS
 
   release:
     name: Create Release
@@ -72,16 +48,33 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Download build artifacts
+      - name: Download artifacts
         uses: actions/download-artifact@v3
         with:
-          path: artifacts
+          name: windows-latest-modernizer
+          path: ./artifacts/windows-latest
 
-      - name: Create GitHub Release
+      - name: Download artifacts for Ubuntu
+        uses: actions/download-artifact@v3
+        with:
+          name: ubuntu-latest-modernizer
+          path: ./artifacts/ubuntu-latest
+
+      - name: Download artifacts for macOS
+        uses: actions/download-artifact@v3
+        with:
+          name: macos-latest-modernizer
+          path: ./artifacts/macos-latest
+
+      - name: Create release
         uses: ncipollo/release-action@v1
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          name: Release ${{ github.ref_name }}
-          tag: ${{ github.ref_name }}
           artifacts: |
-            artifacts/*
+            ./artifacts/windows-latest/modernizer.exe
+            ./artifacts/ubuntu-latest/modernizer
+            ./artifacts/macos-latest/modernizer
+          tag: ${{ github.ref_name }}
+          releaseName: Release ${{ github.ref_name }}
+          body: |
+            Release artifacts for Windows, Ubuntu, and macOS.
+          token: ${{ secrets.GITHUB_TOKEN }}
