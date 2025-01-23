@@ -85,8 +85,14 @@ jobs:
       
       - name: Debug Release URL File
         run: |
-          ls -la artifact
-          cat artifact/release_url.txt || echo "File not found!"
+          if [[ "$RUNNER_OS" == "Windows" ]]; then
+            Get-ChildItem artifact
+            Get-Content artifact/release_url.txt || Write-Output "File not found!"
+          else
+            ls -la artifact
+            cat artifact/release_url.txt || echo "File not found!"
+          fi
+        shell: bash
       
       - name: Get Release File Name & Upload URL
         id: get_release_info
