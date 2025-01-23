@@ -1,73 +1,88 @@
-name: Release
+name: Build
 
 on:
   push:
     tags:
-      - 'v*'  # Trigger release when a new tag is pushed
+      - 'v*'
 
 jobs:
-  release:
-    name: Release - ${{ matrix.platform.release_for }}
-    runs-on: ${{ matrix.platform.os }}
+  createrelease:
+    name: Create Release
+    runs-on: [ubuntu-latest]
+    steps:
+    - name: Create Release
+      id: create_release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ github.ref }}
+        release_name: Release ${{ github.ref }}
+        draft: false
+        prerelease: false
+    - name: Output Release URL File
+      run: echo "${{ steps.create_release.outputs.upload_url }}" > release_url.txt
+    - name: Save Release URL File for publish
+      uses: actions/upload-artifact@v1
+      with:
+        name: release_url
+        path: release_url.txt
+
+  build:
+    name: Build packages
+    needs: createrelease
+    runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        platform:
-          - release_for: Linux-x86_64
-            os: ubuntu-latest
-            pyinstaller_target: linux
-            bin: modernizer
-            name: modernizer-linux-amd64
-
-          - release_for: Windows-x86_64
-            os: windows-latest
-            pyinstaller_target: windows
-            bin: modernizer.exe
-            name: modernizer-windows-amd64.exe
-
-          - release_for: macOS-x86_64
-            os: macos-latest
-            pyinstaller_target: macos
-            bin: modernizer
-            name: modernizer-macos-amd64
-
+        include:
+          - os: macos-latest
+            # MEMO TODO: Add version number to the app name, zip does not supports dots, you have to use - instead
+            TARGET: macos
+            CMD_BUILD: >
+                pyinstaller --onefile --noconsole --add-data "settings.json:." modernizer.py
+                cd dist/ &&
+                zip -r9 modernizer-Mac-x64 APP_NAME-Mac-x64.app/                
+            OUT_FILE_NAME: modernizer-Mac-x64.zip
+            ASSET_MIME: application/zip
+          - os: windows-latest
+            TARGET: windows
+            CMD_BUILD: pyinstaller --onefile --noconsole --add-data "settings.json:." modernizer.py
+            OUT_FILE_NAME: modernizer-${{ github.ref_name }}-Win-x64.exe
+            ASSET_MIME: application/vnd.microsoft.portable-executable
+          - os: ubuntu-latest
+            TARGET: linux
+            CMD_BUILD: pyinstaller --onefile --noconsole --add-data "settings.json:." modernizer.py
+            OUT_FILE_NAME: modernizer-${{ github.ref_name }}-Linux-x64
+            ASSET_MIME: application/zip 
     steps:
-      - uses: actions/checkout@v2  # Checkout code
-
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.9'  # Set up the Python environment
-      
-      - name: Install Python dependencies
-        run: |
-          pip install -r requirements.txt
-        working-directory: ./
-
-      - name: Install PyInstaller
-        run: |
-          python -m pip install --upgrade pip
-          pip install pyinstaller  # Install PyInstaller for packaging
-
-      - name: Build Executable
-        run: |
-          # Build the executable with PyInstaller for each platform (adjusting accordingly)
-          pyinstaller --onefile --noconsole --add-data "settings.json:." modernizer.py
-        working-directory: .
-
-      - name: Prepare assets
-        shell: bash
-        run: |
-          # Prepare the release folder
-          mkdir -p release
-
-          # Move the binary from PyInstaller dist directory to release folder
-          cp dist/modernizer* release/${{ matrix.platform.name }}
-
-      - name: Upload binaries to GitHub release
-        uses: svenstaro/upload-release-action@v2
-        with:
-          repo_token: ${{ secrets.GITHUB_TOKEN }}
-          file: release/${{ matrix.platform.name }}
-          asset_name: ${{ matrix.platform.name }}
-          tag: ${{ github.ref }}
-          overwrite: true
+    - uses: actions/checkout@v1
+    - name: Set up Python 3.12
+      uses: actions/setup-python@v2
+      with:
+        python-version: 3.12
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt        
+    - name: Build with pyinstaller for ${{ matrix.TARGET }}
+      run: ${{ matrix.CMD_BUILD }}
+    - name: Load Release URL File from release job
+      uses: actions/download-artifact@v1
+      with:
+        name: release_url
+    - name: Get Release File Name & Upload URL
+      id: get_release_info
+      shell: bash
+      run: |
+        value=`cat release_url/release_url.txt`
+        echo ::set-output name=upload_url::$value        
+    - name: Upload Release Asset
+      id: upload-release-asset
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.get_release_info.outputs.upload_url }}
+        asset_path: ./dist/${{ matrix.OUT_FILE_NAME}}
+        asset_name: ${{ matrix.OUT_FILE_NAME}}
+        asset_content_type: ${{ matrix.ASSET_MIME}}
