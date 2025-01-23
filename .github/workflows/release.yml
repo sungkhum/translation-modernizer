@@ -1,18 +1,15 @@
-name: Build and Release Assets
+name: Build macOS Release
 
 on:
   push:
     tags:
-      - 'v*'
+      - "v*"
   workflow_dispatch:
 
 jobs:
   build:
-    name: Build Release Assets
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [windows-latest, ubuntu-latest, macos-latest]
+    name: Build macOS Release
+    runs-on: macos-latest
 
     steps:
       - name: Checkout code
@@ -21,60 +18,29 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: 3.x
+          python-version: "3.x"
 
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
+
+      - name: Install PyInstaller
+        run: |
           pip install pyinstaller
 
-      - name: Build executable
+      - name: Build executable with PyInstaller
         run: |
           pyinstaller --onefile --noconsole --add-data "settings.json:." modernizer.py
-        shell: bash
 
-      - name: Upload artifact
+      - name: Archive build output
+        run: |
+          mkdir -p release
+          mv dist/modernizer release/
+          tar -czvf release/modernizer-mac.tar.gz -C release modernizer
+
+      - name: Upload Release Asset
         uses: actions/upload-artifact@v3
         with:
-          name: ${{ matrix.os }}-modernizer
-          path: |
-            dist/modernizer.exe       # For Windows
-            dist/modernizer          # For Ubuntu and macOS
-
-  release:
-    name: Create Release
-    needs: build
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Download artifacts
-        uses: actions/download-artifact@v3
-        with:
-          name: windows-latest-modernizer
-          path: ./artifacts/windows-latest
-
-      - name: Download artifacts for Ubuntu
-        uses: actions/download-artifact@v3
-        with:
-          name: ubuntu-latest-modernizer
-          path: ./artifacts/ubuntu-latest
-
-      - name: Download artifacts for macOS
-        uses: actions/download-artifact@v3
-        with:
-          name: macos-latest-modernizer
-          path: ./artifacts/macos-latest
-
-      - name: Create release
-        uses: ncipollo/release-action@v1
-        with:
-          artifacts: |
-            ./artifacts/windows-latest/modernizer.exe
-            ./artifacts/ubuntu-latest/modernizer
-            ./artifacts/macos-latest/modernizer
-          tag: ${{ github.ref_name }}
-          releaseName: Release ${{ github.ref_name }}
-          body: |
-            Release artifacts for Windows, Ubuntu, and macOS.
-          token: ${{ secrets.GITHUB_TOKEN }}
+          name: modernizer-mac
+          path: release/modernizer-mac.tar.gz
