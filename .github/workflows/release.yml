@@ -8,7 +8,7 @@ on:
 jobs:
   createrelease:
     name: Create Release
-    runs-on: [ubuntu-latest]
+    runs-on: ubuntu-latest
     steps:
     - name: Create Release
       id: create_release
@@ -21,12 +21,12 @@ jobs:
         draft: false
         prerelease: false
     - name: Output Release URL File
-      run: echo "${{ steps.create_release.outputs.upload_url }}" > release_url.txt
+      run: mkdir -p release_url && echo "${{ steps.create_release.outputs.upload_url }}" > release_url/release_url.txt
     - name: Save Release URL File for publish
       uses: actions/upload-artifact@v4
       with:
         name: release_url
-        path: release_url.txt
+        path: release_url/release_url.txt
 
   build:
     name: Build packages
@@ -36,12 +36,11 @@ jobs:
       matrix:
         include:
           - os: macos-latest
-            # MEMO TODO: Add version number to the app name, zip does not supports dots, you have to use - instead
             TARGET: macos
             CMD_BUILD: >
                 pyinstaller -F -w -n modernizer-Mac-x64 --add-data "settings.json:." modernizer.py &&
                 cd dist/ &&
-                zip -r9 modernizer-Mac-x64 modernizer-Mac-x64.app/                
+                zip -r9 modernizer-Mac-x64 modernizer-Mac-x64.app/
             OUT_FILE_NAME: modernizer-Mac-x64.zip
             ASSET_MIME: application/zip
           - os: windows-latest
@@ -53,7 +52,7 @@ jobs:
             TARGET: linux
             CMD_BUILD: pyinstaller -F -n modernizer-${{ github.ref_name }}-Linux-x64 --add-data "settings.json:." modernizer.py
             OUT_FILE_NAME: modernizer-${{ github.ref_name }}-Linux-x64
-            ASSET_MIME: application/zip 
+            ASSET_MIME: application/zip
     steps:
     - uses: actions/checkout@v1
     - name: Set up Python 3.12
@@ -72,6 +71,10 @@ jobs:
       uses: actions/download-artifact@v4
       with:
         name: release_url
+    - name: Debug Release URL File
+      run: |
+        ls -la release_url
+        cat release_url/release_url.txt || echo "File not found!"
     - name: Get Release File Name & Upload URL
       id: get_release_info
       shell: bash
@@ -85,6 +88,6 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: ${{ steps.get_release_info.outputs.upload_url }}
-        asset_path: ./dist/${{ matrix.OUT_FILE_NAME}}
-        asset_name: ${{ matrix.OUT_FILE_NAME}}
-        asset_content_type: ${{ matrix.ASSET_MIME}}
+        asset_path: ./dist/${{ matrix.OUT_FILE_NAME }}
+        asset_name: ${{ matrix.OUT_FILE_NAME }}
+        asset_content_type: ${{ matrix.ASSET_MIME }}
